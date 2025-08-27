@@ -1,0 +1,33 @@
+# Postmortem Analysis for Incident [Incident Name]
+
+## Incident Summary
+- **Date:** [Date of Incident]
+- **Time:** [Time of Incident]
+- **Duration:** [Duration of Incident]
+- **Affected Services:** [List of affected services]
+- **Incident Commander:** [Name of the Incident Commander]
+
+## Timeline
+- **[Time]** - [Event description]
+- **[Time]** - [Event description]
+- **[Time]** - [Event description]
+
+## Root Cause Analysis
+- **What happened:** [Detailed description of the incident]
+- **Why it happened:** [Analysis of the underlying causes]
+
+## Impact
+- **User Impact:** [Description of how users were affected]
+- **Business Impact:** [Description of any business implications]
+
+## Response
+- **Actions Taken:** [List of actions taken to mitigate the incident]
+- **Communication:** [Details on how communication was handled during the incident]
+
+## Lessons Learned
+- [Key takeaways from the incident]
+- [Improvements to be made in processes or systems]
+
+## Action Items
+- [List of action items to prevent recurrence]
+- [Assigned to and due dates]

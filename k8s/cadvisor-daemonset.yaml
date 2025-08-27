@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cadvisor
+  namespace: sre-lab
+spec:
+  selector:
+    matchLabels:
+      app: cadvisor
+  template:
+    metadata:
+      labels:
+        app: cadvisor
+    spec:
+      hostPID: true
+      containers:
+        - name: cadvisor
+          image: gcr.io/cadvisor/cadvisor:latest
+          ports:
+            - containerPort: 8080
+              hostPort: 8080
+          securityContext:
+            privileged: true
+          args:
+            - "--port=8080"
+            - "--prometheus_endpoint=/metrics"
+          volumeMounts:
+            - name: rootfs
+              mountPath: /rootfs:ro
+              readOnly: true
+            - name: var-run
+              mountPath: /var/run:ro
+              readOnly: true
+            - name: sys
+              mountPath: /sys:ro
+              readOnly: true
+            - name: docker
+              mountPath: /var/lib/docker:ro
+              readOnly: true
+      volumes:
+        - name: rootfs
+          hostPath:
+            path: /
+        - name: var-run
+          hostPath:
+            path: /var/run
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: docker
+          hostPath:
+            path: /var/lib/docker
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cadvisor
+  namespace: sre-lab
+spec:
+  selector:
+    app: cadvisor
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP

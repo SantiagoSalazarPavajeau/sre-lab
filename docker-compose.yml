@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./src/services/app
+    ports:
+      - "8080:8080"
+    networks:
+      - sre-network
+
+  monitoring:
+    image: prom/prometheus
+    volumes:
+      - ./src/services/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - sre-network
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - sre-network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - "8081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - sre-network
+
+networks:
+  sre-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  monitoring-data:
