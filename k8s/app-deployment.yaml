@@ -4,7 +4,7 @@ metadata:
   name: app
   namespace: sre-lab
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: app
@@ -13,6 +13,18 @@ spec:
       labels:
         app: app
     spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - app
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: app
           image: sre-lab-app:latest
