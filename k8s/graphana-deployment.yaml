@@ -24,9 +24,14 @@ spec:
           volumeMounts:
             - name: grafana-storage
               mountPath: /var/lib/grafana
+            - name: grafana-provisioning
+              mountPath: /etc/grafana/provisioning/datasources
       volumes:
         - name: grafana-storage
           emptyDir: {}
+        - name: grafana-provisioning
+          configMap:
+            name: grafana-datasources
 ---
 apiVersion: v1
 kind: Service
@@ -40,3 +45,22 @@ spec:
     - port: 3000
       targetPort: 3000
   type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: sre-lab
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    deleteDatasources:
+    - name: Prometheus
+      orgId: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
