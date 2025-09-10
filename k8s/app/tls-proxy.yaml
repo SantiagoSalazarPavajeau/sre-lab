@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tls-proxy-nginx-conf
+  namespace: app
+data:
+  nginx.conf: |
+    events {}
+    http {
+      upstream app_upstream {
+        server app.app.svc.cluster.local:8080;
+      }
+
+      server {
+        listen              443 ssl;
+        server_name         app.local;
+
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+        ssl_protocols       TLSv1.2 TLSv1.3;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+
+        location / {
+          proxy_pass http://app_upstream;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location = /healthz {
+          return 200 'ok';
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tls-proxy
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tls-proxy
+  template:
+    metadata:
+      labels:
+        app: tls-proxy
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25-alpine
+          ports:
+            - containerPort: 443
+              name: https
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/nginx/tls
+              readOnly: true
+            - name: conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+      volumes:
+        - name: tls
+          secret:
+            secretName: app-tls
+        - name: conf
+          configMap:
+            name: tls-proxy-nginx-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tls-proxy
+  namespace: app
+spec:
+  type: NodePort
+  selector:
+    app: tls-proxy
+  ports:
+    - name: https
+      port: 443
+      targetPort: 443
+      nodePort: 30443

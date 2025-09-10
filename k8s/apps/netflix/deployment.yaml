@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: netflix
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: netflix
+  template:
+    metadata:
+      labels:
+        app: netflix
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - netflix
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: netflix
+          image: sre-lab-netflix:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_NAME
+              value: netflix
+            - name: FAILURE_MODE
+              value: "none"
+            - name: FAILURE_RATE
+              value: "0.0"
+            - name: LATENCY_MS
+              value: "0"
+          ports:
+            - name: http
+              containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netflix
+  namespace: app
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: netflix
+  type: ClusterIP

@@ -1,14 +1,26 @@
 pipeline {
   agent any
-  environment {
-    IMAGE = 'docker.io/<your-registry>/sre-lab-app'
-    K8S_MANIFEST = 'k8s/app-deployment.yaml'
+  parameters {
+    booleanParam(name: 'SIMULATE_TLS_OUTAGE', defaultValue: false, description: 'Run TLS outage simulation stage')
+    choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
+    choice(name: 'APP_NAME', choices: ['app', 'facebook', 'netflix', 'slack'], description: 'Which mock app to build/deploy')
   }
+  environment { }
   stages {
     stage('Checkout') { steps { checkout scm } }
+    stage('Prepare Vars') {
+      steps {
+        script {
+          env.APP_NAME = params.APP_NAME ?: 'app'
+          env.IMAGE = "docker.io/<your-registry>/sre-lab-${env.APP_NAME}"
+          env.K8S_MANIFEST = (env.APP_NAME == 'app') ? 'k8s/app/app-deployment.yaml' : "k8s/apps/${env.APP_NAME}/deployment.yaml"
+        }
+        sh 'echo Using APP_NAME=${APP_NAME} IMAGE=${IMAGE} K8S_MANIFEST=${K8S_MANIFEST}'
+      }
+    }
     stage('Build') {
       steps {
-        sh 'docker build -t ${IMAGE}:${GIT_COMMIT::8} ./src/services/app'
+        sh 'docker build -t ${IMAGE}:${GIT_COMMIT::8} ./src/services/${APP_NAME}'
       }
     }
     stage('Push') {
@@ -29,6 +41,22 @@ pipeline {
           git commit -m "ci: deploy image ${GIT_COMMIT::8}"
           git push origin HEAD:main
         """
+      }
+    }
+    stage('TLS Outage Simulation') {
+      when { expression { return params.SIMULATE_TLS_OUTAGE } }
+      steps {
+        script {
+          if (params.TLS_ACTION == 'prepare') {
+            sh 'scripts/tls_prepare.sh'
+          } else if (params.TLS_ACTION == 'outage') {
+            sh 'scripts/tls_outage_start.sh'
+          } else if (params.TLS_ACTION == 'recover') {
+            sh 'scripts/tls_outage_recover.sh'
+          } else {
+            error("Unknown TLS_ACTION: ${params.TLS_ACTION}")
+          }
+        }
       }
     }
   }

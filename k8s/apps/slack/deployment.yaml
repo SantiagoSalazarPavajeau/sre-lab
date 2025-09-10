@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: app
+  name: slack
   namespace: app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: app
+      app: slack
   template:
     metadata:
       labels:
-        app: app
+        app: slack
     spec:
       affinity:
         podAntiAffinity:
@@ -23,12 +23,21 @@ spec:
                 - key: app
                   operator: In
                   values:
-                  - app
+                  - slack
               topologyKey: kubernetes.io/hostname
       containers:
-        - name: app
-          image: sre-lab-app:latest
+        - name: slack
+          image: sre-lab-slack:latest
           imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_NAME
+              value: slack
+            - name: FAILURE_MODE
+              value: "none"
+            - name: FAILURE_RATE
+              value: "0.0"
+            - name: LATENCY_MS
+              value: "0"
           ports:
             - name: http
               containerPort: 8080
@@ -36,7 +45,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: app
+  name: slack
   namespace: app
 spec:
   ports:
@@ -44,5 +53,5 @@ spec:
       port: 8080
       targetPort: 8080
   selector:
-    app: app
+    app: slack
   type: ClusterIP

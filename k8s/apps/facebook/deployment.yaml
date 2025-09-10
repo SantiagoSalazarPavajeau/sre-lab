@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: facebook
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: facebook
+  template:
+    metadata:
+      labels:
+        app: facebook
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - facebook
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: facebook
+          image: sre-lab-facebook:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_NAME
+              value: facebook
+            - name: FAILURE_MODE
+              value: "none"   # none|error|latency|crash
+            - name: FAILURE_RATE
+              value: "0.0"    # 0..1 probability
+            - name: LATENCY_MS
+              value: "0"      # added latency when FAILURE_MODE=latency
+          ports:
+            - name: http
+              containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: facebook
+  namespace: app
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: facebook
+  type: ClusterIP

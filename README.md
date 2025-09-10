@@ -31,6 +31,84 @@ It serves as both a training ground and a portfolio showcase of hands-on SRE exp
 - **Chaos Engineering Tools:** Chaos Mesh or Litmus to inject failures and stress test reliability.
 - **CI/CD Workflow:** local pipelines (via GitOps or simple scripts) to practice safe deployments.
 
+## Mock Apps (facebook/netflix/slack)
+
+This lab now supports multiple simple mock apps that all expose standard endpoints and Prometheus metrics. Each app is independently deployable so you can spin up exactly what a lab needs.
+
+- Endpoints: `GET /` (hello), `GET /healthz`, `GET /readyz`, `GET /metrics`
+- Failure toggles (via env): `FAILURE_MODE` (none|error|latency|crash), `FAILURE_RATE` (0..1), `LATENCY_MS` (int)
+
+### Decoupled Deployments
+
+You can now deploy the cluster, infra, monitoring, CI/CD, and apps independently.
+
+- Cluster only: `start-up/cluster-up.sh`
+- Infra (namespaces): `start-up/deploy-infra.sh`
+- Monitoring (Prometheus, Grafana, Alertmanager, exporters): `start-up/deploy-monitoring.sh`
+- CI/CD (installs Argo CD, applies CI/CD manifests): `start-up/deploy-cicd.sh`
+- App: `APP=facebook start-up/deploy-app.sh`
+
+Monitoring discovers app services dynamically via Kubernetes service discovery (no hardcoded targets), so it’s safe to deploy monitoring without any apps.
+
+### Deploy locally with kind
+
+- Default app (quickstart):
+  - `start-up/quickstart.sh`
+
+- Specific app (quickstart):
+  - `APP=facebook start-up/quickstart.sh`
+  - `APP=netflix start-up/quickstart.sh`
+  - `APP=slack start-up/quickstart.sh`
+
+- With port-forwards (Prometheus 9090, Grafana 3000, selected app 8080):
+  - `PORT_FORWARD=1 APP=facebook start-up/quickstart.sh`
+
+The script builds `src/services/$APP`, tags it as `sre-lab-$APP:latest`, loads it into kind, applies `k8s/` and `k8s/apps/$APP`. For more granular control, use the decoupled scripts above.
+
+### Tear Down
+
+- App only:
+  - `APP=facebook start-up/destroy-app.sh`
+- Monitoring only:
+  - `start-up/destroy-monitoring.sh`
+- CI/CD only (and optionally Argo CD namespace):
+  - `start-up/destroy-cicd.sh`
+  - `DELETE_ARGOCD_NAMESPACE=1 start-up/destroy-cicd.sh`
+- Infra (namespaces; deletes contained resources):
+  - `start-up/destroy-infra.sh`
+- Everything (cluster):
+  - `start-up/kind-down.sh`
+
+### Deploy via kubectl
+
+If your cluster is already up:
+
+- `kubectl apply -f k8s/apps/facebook`
+- `kubectl apply -f k8s/apps/netflix`
+- `kubectl apply -f k8s/apps/slack`
+
+### Failure injection examples
+
+All apps support simple, controlled failures through environment variables on their Deployment:
+
+- Return 500s 50% of the time:
+  - `kubectl -n app set env deploy/facebook FAILURE_MODE=error FAILURE_RATE=0.5`
+
+- Add 250ms latency 30% of the time:
+  - `kubectl -n app set env deploy/netflix FAILURE_MODE=latency FAILURE_RATE=0.3 LATENCY_MS=250`
+
+- Crash immediately on next request (pod restarts due to liveness):
+  - `kubectl -n app set env deploy/slack FAILURE_MODE=crash`
+
+- Reset to healthy:
+  - `kubectl -n app set env deploy/facebook FAILURE_MODE=none FAILURE_RATE=0 LATENCY_MS=0`
+
+Prometheus scrapes all app services at `:8080/metrics` (see `k8s/monitoring/prometheus-config.yaml`). Grafana can be pointed at Prometheus to visualize `app_requests_total`, `app_request_errors_total`, and `app_request_duration_seconds` per app.
+
+### Jenkins (optional)
+
+The pipeline accepts a parameter `APP_NAME` with choices `app`, `facebook`, `netflix`, `slack` and builds `./src/services/${APP_NAME}`. It updates the matching manifest under `k8s/app/` (for `app`) or `k8s/apps/${APP_NAME}/` and pushes the image tag into the manifest.
+
 ## Daily Flow
 
 1. **Start the lab:** spin up local Kubernetes + supporting services.

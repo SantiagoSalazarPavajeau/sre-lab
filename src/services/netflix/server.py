@@ -6,9 +6,9 @@ import threading
 import time
 import sys
 
-APP_NAME = os.getenv("APP_NAME", "app")
-FAILURE_MODE = os.getenv("FAILURE_MODE", "none")  # none|error|latency|crash
-FAILURE_RATE = float(os.getenv("FAILURE_RATE", "0.0"))  # 0..1
+APP_NAME = os.getenv("APP_NAME", "netflix")
+FAILURE_MODE = os.getenv("FAILURE_MODE", "none")
+FAILURE_RATE = float(os.getenv("FAILURE_RATE", "0.0"))
 LATENCY_MS = int(os.getenv("LATENCY_MS", "0"))
 
 REQUESTS = Counter('app_requests_total', 'Total HTTP requests', ['app', 'path'])
@@ -18,15 +18,12 @@ LATENCY = Histogram('app_request_duration_seconds', 'Request latency', ['app', '
 
 def maybe_fail(path: str):
     global FAILURE_MODE, FAILURE_RATE, LATENCY_MS
-    # Crash once on first request if configured
     if FAILURE_MODE == 'crash':
         print(f"[{APP_NAME}] crashing on purpose", file=sys.stderr)
         sys.stderr.flush()
         os._exit(1)
-
     if FAILURE_MODE == 'latency' and random.random() < FAILURE_RATE:
-        delay = max(0, LATENCY_MS) / 1000.0
-        time.sleep(delay)
+        time.sleep(max(0, LATENCY_MS) / 1000.0)
     elif FAILURE_MODE == 'error' and random.random() < FAILURE_RATE:
         raise RuntimeError("Injected failure")
 
@@ -43,11 +40,9 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split('?')[0]
         REQUESTS.labels(APP_NAME, path).inc()
-
         if path == '/metrics':
             self._send(200, generate_latest(), CONTENT_TYPE_LATEST)
             return
-
         start = time.time()
         try:
             maybe_fail(path)
@@ -58,7 +53,6 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == '/readyz':
                 self._send(200, 'ready')
             else:
-                # Fallback to static handler for any files in the directory
                 return super().do_GET()
         except Exception as e:
             ERRORS.labels(APP_NAME, path).inc()
