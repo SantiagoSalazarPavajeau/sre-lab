@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
+KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
+export KUBECONFIG="${KUBECONFIG_FILE}"
+
 APP=${APP:-app}
 
 echo "Deleting app '${APP}' manifests..."

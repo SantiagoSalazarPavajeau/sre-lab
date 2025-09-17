@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
+KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
+export KUBECONFIG="${KUBECONFIG_FILE}"
+
 echo "Deleting local CI/CD manifests (namespace: cicd)..."
 kubectl delete -f k8s/cicd/ --ignore-not-found
 

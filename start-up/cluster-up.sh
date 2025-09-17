@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
+KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
+export KUBECONFIG="${KUBECONFIG_FILE}"
+
 if ! command -v kind >/dev/null 2>&1; then
   echo "kind is not installed. Install with: brew install kind" >&2
   exit 1
@@ -17,5 +20,8 @@ if ! kind get clusters | grep -q "^${CLUSTER_NAME}$"; then
 else
   echo "Kind cluster '${CLUSTER_NAME}' already exists"
 fi
+
+mkdir -p "$(dirname "${KUBECONFIG_FILE}")"
+kind export kubeconfig --name "${CLUSTER_NAME}" --kubeconfig "${KUBECONFIG_FILE}" --internal >/dev/null
 
 "${ROOT}/start-up/kube-wait.sh"

@@ -96,6 +96,7 @@ If your cluster is already up:
   - `terraform apply -auto-approve -var-file=environments/localstack.tfvars`
 - Outputs advertise the VPC, subnet, and IAM details a real EKS control plane would expect. Use them to wire additional automation or document lab assumptions.
 - Tear everything down via `start-up/localstack-down.sh -v` when finished.
+- All Kubernetes scripts produce a dedicated kubeconfig at `.kind-kubeconfig` and export it automatically, so Jenkins and local workflows share a consistent API endpoint even when kind runs inside a container.
 
 ### Jenkins controller (local Docker)
 
@@ -111,6 +112,7 @@ If your cluster is already up:
   - `TF_ENV` – selects the Terraform workspace and matching `environments/<env>.tfvars` file (default `localstack`).
   - `TF_ACTION` – choose between `plan` and `apply` for the infrastructure stage.
   - `SKIP_TERRAFORM` – bypass mock AWS provisioning (useful for app-only builds).
+- kubeconfig for the kind cluster is written to `.kind-kubeconfig`; all `start-up/*.sh` helpers export this path so subsequent `kubectl` commands (including Jenkins stages) hit the correct API endpoint.
 - The pipeline stages run in this order:
   1. Bootstrap kind (if enabled).
   2. Start LocalStack, run Terraform plan/apply, capture outputs, tear LocalStack down.

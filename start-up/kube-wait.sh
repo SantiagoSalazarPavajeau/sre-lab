@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT=$(cd "$(dirname "$0")/.." && pwd)
+KUBECONFIG_FILE="${KUBECONFIG:-${ROOT}/.kind-kubeconfig}"
+export KUBECONFIG="${KUBECONFIG_FILE}"
+
 MAX_ATTEMPTS=${MAX_KUBE_WAIT_ATTEMPTS:-30}
 SLEEP_SECONDS=${KUBE_WAIT_SLEEP_SECONDS:-5}
 
