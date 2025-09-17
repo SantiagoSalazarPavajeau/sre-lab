@@ -9,13 +9,13 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker-compose version >/dev/null 2>&1; then
-  echo "docker-compose plugin is required (docker-compose v2)" >&2
+if ! docker compose version >/dev/null 2>&1; then
+  echo "docker compose plugin is required (Docker CLI v2)" >&2
   exit 1
 fi
 
 echo "Starting LocalStack using ${COMPOSE_FILE}"
-docker-compose -f "${COMPOSE_FILE}" up -d
+docker compose -f "${COMPOSE_FILE}" up -d
 
 echo "LocalStack edge endpoint available at http://localhost:4566"
 

@@ -5,7 +5,7 @@ This image runs Jenkins with all the tooling needed to manage the SRE Lab locall
 ## Usage
 
 ```bash
-docker-compose -f infra/jenkins/docker-compose.yml up -d --build
+docker compose -f infra/jenkins/docker-compose.yml up -d --build
 ```
 
 Once Jenkins is up, browse to `http://localhost:8080`.
@@ -20,7 +20,7 @@ All pipeline steps execute inside the controller container. Because the compose 
 ### Shutdown
 
 ```bash
-docker-compose -f infra/jenkins/docker-compose.yml down
+docker compose -f infra/jenkins/docker-compose.yml down
 ```
 
 Persisted Jenkins state lives in the named volume `jenkins_home`.
