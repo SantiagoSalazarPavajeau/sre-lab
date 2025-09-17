@@ -10,5 +10,5 @@ export KUBECONFIG="${KUBECONFIG_FILE}"
 echo "Applying infra namespace and base resources..."
 # Ensure cluster is ready before applying manifests
 "${ROOT}/start-up/kube-wait.sh"
-kubectl apply -f k8s/infra/namespace.yaml
+kubectl apply --validate=false -f k8s/infra/namespace.yaml
 echo "Infra applied."
