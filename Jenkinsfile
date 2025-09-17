@@ -71,7 +71,7 @@ fi
       when { expression { return !params.SKIP_TERRAFORM } }
       steps {
         dir('infra/localstack') {
-          sh 'docker compose up -d'
+          sh 'docker-compose up -d'
         }
         dir('infra/terraform') {
           sh '''#!/usr/bin/env bash
@@ -90,7 +90,7 @@ fi
       post {
         always {
           dir('infra/localstack') {
-            sh 'docker compose down || true'
+            sh 'docker-compose down || true'
           }
         }
       }

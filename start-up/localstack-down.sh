@@ -9,10 +9,10 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! docker compose version >/dev/null 2>&1; then
-  echo "docker compose plugin is required (docker compose v2)" >&2
+if ! docker-compose version >/dev/null 2>&1; then
+  echo "docker-compose plugin is required (docker-compose v2)" >&2
   exit 1
 fi
 
 echo "Stopping LocalStack"
-docker compose -f "${COMPOSE_FILE}" down "$@"
+docker-compose -f "${COMPOSE_FILE}" down "$@"

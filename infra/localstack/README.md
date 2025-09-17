@@ -3,7 +3,7 @@
 Spin up a fully local AWS-compatible endpoint for Terraform and integration tests.
 
 ```bash
-docker compose -f infra/localstack/docker-compose.yml up -d
+docker-compose -f infra/localstack/docker-compose.yml up -d
 ```
 
 Key ports:
@@ -14,7 +14,7 @@ Key ports:
 The compose file persists data to `infra/localstack/data/` so repeated Terraform runs can reuse state. Run the following to reset the environment:
 
 ```bash
-docker compose -f infra/localstack/docker-compose.yml down -v
+docker-compose -f infra/localstack/docker-compose.yml down -v
 ```
 
 Credentials are seeded with `AWS_ACCESS_KEY_ID=test`, `AWS_SECRET_ACCESS_KEY=test`, and the `us-east-1` region which matches the Terraform defaults under `infra/terraform/`.
