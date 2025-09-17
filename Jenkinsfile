@@ -1,16 +1,16 @@
 pipeline {
   agent any
   parameters {
-    booleanParam(name: 'SIMULATE_TLS_OUTAGE', defaultValue: false, description: 'Run TLS outage simulation stage')
-    choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
     choice(name: 'APP_NAME', choices: ['app', 'facebook', 'netflix', 'slack'], description: 'Which mock app to build/deploy')
     booleanParam(name: 'SKIP_TERRAFORM', defaultValue: false, description: 'Skip Terraform provisioning stage')
-    choice(name: 'TF_ACTION', choices: ['plan', 'apply'], description: 'Terraform action to run')
+    choice(name: 'TF_ACTION', choices: ['apply', 'plan'], description: 'Terraform action to run')
     string(name: 'TF_ENV', defaultValue: 'localstack', description: 'Terraform workspace/tfvars name under infra/terraform/environments')
     booleanParam(name: 'BOOTSTRAP_KIND', defaultValue: true, description: 'Create or update the local kind cluster before deploying')
     booleanParam(name: 'DEPLOY_INFRA', defaultValue: true, description: 'Apply baseline namespaces and infrastructure manifests')
-    booleanParam(name: 'DEPLOY_MONITORING', defaultValue: false, description: 'Deploy monitoring stack after infra is ready')
-    booleanParam(name: 'DEPLOY_CICD', defaultValue: false, description: 'Deploy cluster-side CI/CD components (e.g., Argo)')
+    booleanParam(name: 'DEPLOY_MONITORING', defaultValue: true, description: 'Deploy monitoring stack after infra is ready')
+    booleanParam(name: 'DEPLOY_CICD', defaultValue: true, description: 'Deploy cluster-side CI/CD components (e.g., Argo)')
+    booleanParam(name: 'SIMULATE_TLS_OUTAGE', defaultValue: false, description: 'Run TLS outage simulation stage')
+    choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
   }
   stages {
     stage('Checkout') { steps { checkout scm } }
