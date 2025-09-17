@@ -21,6 +21,13 @@ else
   echo "Kind cluster '${CLUSTER_NAME}' already exists"
 fi
 
+# Ensure this container can reach the kind network (required when running inside Jenkins)
+if docker network inspect kind >/dev/null 2>&1; then
+  CONTAINER_ID=$(hostname)
+  echo "Connecting ${CONTAINER_ID} to kind network"
+  docker network connect kind "${CONTAINER_ID}" >/dev/null 2>&1 || true
+fi
+
 mkdir -p "$(dirname "${KUBECONFIG_FILE}")"
 kind export kubeconfig --name "${CLUSTER_NAME}" --kubeconfig "${KUBECONFIG_FILE}" --internal >/dev/null
 
