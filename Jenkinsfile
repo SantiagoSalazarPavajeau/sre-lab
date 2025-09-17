@@ -27,6 +27,7 @@ pipeline {
           env.DEPLOY_INFRA = params.DEPLOY_INFRA ? 'true' : 'false'
           env.DEPLOY_MONITORING = params.DEPLOY_MONITORING ? 'true' : 'false'
           env.DEPLOY_CICD = params.DEPLOY_CICD ? 'true' : 'false'
+          env.GIT_COMMIT_SHORT = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : 'localdev'
         }
         sh 'echo Using APP_NAME=${APP_NAME} IMAGE=${IMAGE} K8S_MANIFEST=${K8S_MANIFEST}'
       }
@@ -79,25 +80,25 @@ pipeline {
     }
     stage('Build') {
       steps {
-        sh 'docker build -t ${IMAGE}:${GIT_COMMIT::8} ./src/services/${APP_NAME}'
+        sh 'docker build -t ${IMAGE}:${GIT_COMMIT_SHORT} ./src/services/${APP_NAME}'
       }
     }
     stage('Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'registry-creds', usernameVariable: 'REG_USR', passwordVariable: 'REG_PSW')]) {
           sh 'echo $REG_PSW | docker login docker.io -u $REG_USR --password-stdin'
-          sh 'docker push ${IMAGE}:${GIT_COMMIT::8}'
+          sh 'docker push ${IMAGE}:${GIT_COMMIT_SHORT}'
         }
       }
     }
     stage('Update Manifests') {
       steps {
         sh """
-          yq e -i '.spec.template.spec.containers[0].image = \"${IMAGE}:${GIT_COMMIT::8}\"' ${K8S_MANIFEST}
+          yq e -i '.spec.template.spec.containers[0].image = \"${IMAGE}:${GIT_COMMIT_SHORT}\"' ${K8S_MANIFEST}
           git config user.email "ci@example.com"
           git config user.name "ci-bot"
           git add ${K8S_MANIFEST}
-          git commit -m "ci: deploy image ${GIT_COMMIT::8}"
+          git commit -m "ci: deploy image ${GIT_COMMIT_SHORT}"
           git push origin HEAD:main
         """
       }
