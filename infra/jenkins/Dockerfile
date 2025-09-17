@@ -37,6 +37,12 @@ RUN curl -fsSLo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/down
 # Allow Jenkins to talk to the host Docker daemon
 RUN groupadd -g 999 docker || true && usermod -aG docker jenkins
 
-USER jenkins
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+USER root
 
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["/usr/bin/tini", "--", "/usr/local/bin/jenkins.sh"]
