@@ -5,6 +5,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    docker.io \
     git \
     jq \
     lsb-release \
@@ -39,4 +40,3 @@ RUN groupadd -g 999 docker || true && usermod -aG docker jenkins
 USER jenkins
 
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
-
