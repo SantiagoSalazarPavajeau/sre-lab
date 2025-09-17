@@ -75,7 +75,8 @@ fi
         }
         dir('infra/localstack') {
           sh 'docker compose up -d'
-          sh '''#!/usr/bin/env bash
+          script {
+            def status = sh(returnStatus: true, script: '''#!/usr/bin/env bash
 set -euo pipefail
 container_id=$(docker compose ps -q localstack)
 if [ -n "$container_id" ]; then
@@ -85,7 +86,12 @@ if [ -n "$container_id" ]; then
   done
 fi
 ./wait-for-localstack.sh "$LOCALSTACK_ENDPOINT"
-'''
+''')
+            if (status != 0) {
+              sh 'docker compose logs localstack || true'
+              error 'LocalStack failed to become ready'
+            }
+          }
         }
         dir('infra/terraform') {
           sh '''#!/usr/bin/env bash
