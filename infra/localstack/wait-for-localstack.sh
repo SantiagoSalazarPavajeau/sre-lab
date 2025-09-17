@@ -2,17 +2,24 @@
 set -euo pipefail
 
 BASE_ENDPOINT=${1:-${LOCALSTACK_ENDPOINT:-http://localhost:4566}}
-HEALTH_ENDPOINT="${BASE_ENDPOINT%/}/_localstack/health"
+HEALTH_HTTP="${BASE_ENDPOINT%/}/_localstack/health"
+HEALTH_ENDPOINTS=($HEALTH_HTTP)
+if [[ "$HEALTH_HTTP" == http://* ]]; then
+  HEALTH_HTTPS="https://${HEALTH_HTTP#http://}"
+  HEALTH_ENDPOINTS+=($HEALTH_HTTPS)
+fi
 MAX_ATTEMPTS=${LOCALSTACK_MAX_ATTEMPTS:-60}
 SLEEP_SECONDS=${LOCALSTACK_SLEEP_SECONDS:-5}
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-  if OUTPUT=$(curl -fsS -k "$HEALTH_ENDPOINT" 2>/dev/null); then
-    if echo "$OUTPUT" | grep -q '"ready": *true'; then
-      echo "LocalStack is ready"
-      exit 0
+  for endpoint in "${HEALTH_ENDPOINTS[@]}"; do
+    if OUTPUT=$(curl -fsS -k "$endpoint" 2>/dev/null); then
+      if echo "$OUTPUT" | grep -q '"ready": *true'; then
+        echo "LocalStack is ready (via $endpoint)"
+        exit 0
+      fi
     fi
-  fi
+  done
   echo "Waiting for LocalStack ($attempt/$MAX_ATTEMPTS)"
   sleep "$SLEEP_SECONDS"
 done
