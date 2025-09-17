@@ -4,6 +4,7 @@ pipeline {
     skipDefaultCheckout(true)
   }
   parameters {
+    string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to check out')
     choice(name: 'APP_NAME', choices: ['app', 'facebook', 'netflix', 'slack'], description: 'Which mock app to build/deploy')
     booleanParam(name: 'SKIP_TERRAFORM', defaultValue: false, description: 'Skip Terraform provisioning stage')
     choice(name: 'TF_ACTION', choices: ['apply', 'plan'], description: 'Terraform action to run')
@@ -16,13 +17,26 @@ pipeline {
     choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
   }
   stages {
-    stage('Checkout') { steps { checkout scm } }
+    stage('Checkout') {
+      steps {
+        script {
+          env.BRANCH = (params.BRANCH && params.BRANCH.trim()) ? params.BRANCH.trim() : 'main'
+          checkout([
+            $class: 'GitSCM',
+            branches: [[name: "*/${env.BRANCH}" ]],
+            userRemoteConfigs: scm.getUserRemoteConfigs(),
+            extensions: []
+          ])
+        }
+      }
+    }
     stage('Prepare Vars') {
       steps {
         script {
           env.APP_NAME = params.APP_NAME ?: 'app'
           env.IMAGE = "docker.io/<your-registry>/sre-lab-${env.APP_NAME}"
           env.K8S_MANIFEST = (env.APP_NAME == 'app') ? 'k8s/app/app-deployment.yaml' : "k8s/apps/${env.APP_NAME}/deployment.yaml"
+          env.BRANCH = (params.BRANCH && params.BRANCH.trim()) ? params.BRANCH.trim() : 'main'
           env.TERRAFORM_ENV = (params.TF_ENV && params.TF_ENV.trim()) ? params.TF_ENV.trim() : 'localstack'
           env.TERRAFORM_ACTION = params.TF_ACTION ?: 'plan'
           env.BOOTSTRAP_KIND = params.BOOTSTRAP_KIND ? 'true' : 'false'
