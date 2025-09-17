@@ -34,18 +34,18 @@ pipeline {
     stage('Bootstrap kind Cluster') {
       when { expression { return env.BOOTSTRAP_KIND == 'true' } }
       steps {
-        sh '''
-          set -euo pipefail
-          start-up/cluster-up.sh
-          if [ "${DEPLOY_INFRA}" = "true" ]; then
-            start-up/deploy-infra.sh
-          fi
-          if [ "${DEPLOY_MONITORING}" = "true" ]; then
-            start-up/deploy-monitoring.sh
-          fi
-          if [ "${DEPLOY_CICD}" = "true" ]; then
-            start-up/deploy-cicd.sh
-          fi
+        sh '''#!/usr/bin/env bash
+set -euo pipefail
+start-up/cluster-up.sh
+if [ "${DEPLOY_INFRA}" = "true" ]; then
+  start-up/deploy-infra.sh
+fi
+if [ "${DEPLOY_MONITORING}" = "true" ]; then
+  start-up/deploy-monitoring.sh
+fi
+if [ "${DEPLOY_CICD}" = "true" ]; then
+  start-up/deploy-cicd.sh
+fi
         '''
       }
     }
@@ -56,16 +56,16 @@ pipeline {
           sh 'docker compose up -d'
         }
         dir('infra/terraform') {
-          sh '''
-            set -euo pipefail
-            terraform init -input=false
-            terraform workspace select ${TERRAFORM_ENV} || terraform workspace new ${TERRAFORM_ENV}
-            if [ "${TERRAFORM_ACTION}" = "plan" ]; then
-              terraform plan -input=false -var-file="environments/${TERRAFORM_ENV}.tfvars" -out=tfplan
-            else
-              terraform apply -input=false -auto-approve -var-file="environments/${TERRAFORM_ENV}.tfvars"
-              terraform output
-            fi
+          sh '''#!/usr/bin/env bash
+set -euo pipefail
+terraform init -input=false
+terraform workspace select ${TERRAFORM_ENV} || terraform workspace new ${TERRAFORM_ENV}
+if [ "${TERRAFORM_ACTION}" = "plan" ]; then
+  terraform plan -input=false -var-file="environments/${TERRAFORM_ENV}.tfvars" -out=tfplan
+else
+  terraform apply -input=false -auto-approve -var-file="environments/${TERRAFORM_ENV}.tfvars"
+  terraform output
+fi
           '''
         }
       }
