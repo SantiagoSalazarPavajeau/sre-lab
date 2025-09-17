@@ -4,7 +4,7 @@ pipeline {
     skipDefaultCheckout(true)
   }
   parameters {
-    string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to check out')
+    string(name: 'BRANCH', defaultValue: 'setup-jenkins', description: 'Git branch to check out')
     choice(name: 'APP_NAME', choices: ['app', 'facebook', 'netflix', 'slack'], description: 'Which mock app to build/deploy')
     booleanParam(name: 'SKIP_TERRAFORM', defaultValue: false, description: 'Skip Terraform provisioning stage')
     choice(name: 'TF_ACTION', choices: ['apply', 'plan'], description: 'Terraform action to run')
