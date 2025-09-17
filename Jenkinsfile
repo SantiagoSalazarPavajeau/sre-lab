@@ -4,6 +4,13 @@ pipeline {
     booleanParam(name: 'SIMULATE_TLS_OUTAGE', defaultValue: false, description: 'Run TLS outage simulation stage')
     choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
     choice(name: 'APP_NAME', choices: ['app', 'facebook', 'netflix', 'slack'], description: 'Which mock app to build/deploy')
+    booleanParam(name: 'SKIP_TERRAFORM', defaultValue: false, description: 'Skip Terraform provisioning stage')
+    choice(name: 'TF_ACTION', choices: ['plan', 'apply'], description: 'Terraform action to run')
+    string(name: 'TF_ENV', defaultValue: 'localstack', description: 'Terraform workspace/tfvars name under infra/terraform/environments')
+    booleanParam(name: 'BOOTSTRAP_KIND', defaultValue: true, description: 'Create or update the local kind cluster before deploying')
+    booleanParam(name: 'DEPLOY_INFRA', defaultValue: true, description: 'Apply baseline namespaces and infrastructure manifests')
+    booleanParam(name: 'DEPLOY_MONITORING', defaultValue: false, description: 'Deploy monitoring stack after infra is ready')
+    booleanParam(name: 'DEPLOY_CICD', defaultValue: false, description: 'Deploy cluster-side CI/CD components (e.g., Argo)')
   }
   environment { }
   stages {
@@ -14,8 +21,60 @@ pipeline {
           env.APP_NAME = params.APP_NAME ?: 'app'
           env.IMAGE = "docker.io/<your-registry>/sre-lab-${env.APP_NAME}"
           env.K8S_MANIFEST = (env.APP_NAME == 'app') ? 'k8s/app/app-deployment.yaml' : "k8s/apps/${env.APP_NAME}/deployment.yaml"
+          env.TERRAFORM_ENV = (params.TF_ENV && params.TF_ENV.trim()) ? params.TF_ENV.trim() : 'localstack'
+          env.TERRAFORM_ACTION = params.TF_ACTION ?: 'plan'
+          env.BOOTSTRAP_KIND = params.BOOTSTRAP_KIND ? 'true' : 'false'
+          env.DEPLOY_INFRA = params.DEPLOY_INFRA ? 'true' : 'false'
+          env.DEPLOY_MONITORING = params.DEPLOY_MONITORING ? 'true' : 'false'
+          env.DEPLOY_CICD = params.DEPLOY_CICD ? 'true' : 'false'
         }
         sh 'echo Using APP_NAME=${APP_NAME} IMAGE=${IMAGE} K8S_MANIFEST=${K8S_MANIFEST}'
+      }
+    }
+    stage('Bootstrap kind Cluster') {
+      when { expression { return env.BOOTSTRAP_KIND == 'true' } }
+      steps {
+        sh '''
+          set -euo pipefail
+          start-up/cluster-up.sh
+          if [ "${DEPLOY_INFRA}" = "true" ]; then
+            start-up/deploy-infra.sh
+          fi
+          if [ "${DEPLOY_MONITORING}" = "true" ]; then
+            start-up/deploy-monitoring.sh
+          fi
+          if [ "${DEPLOY_CICD}" = "true" ]; then
+            start-up/deploy-cicd.sh
+          fi
+        '''
+      }
+    }
+    stage('Provision Infrastructure') {
+      when { expression { return !params.SKIP_TERRAFORM } }
+      steps {
+        dir('infra/localstack') {
+          sh 'docker compose up -d'
+        }
+        dir('infra/terraform') {
+          sh '''
+            set -euo pipefail
+            terraform init -input=false
+            terraform workspace select ${TERRAFORM_ENV} || terraform workspace new ${TERRAFORM_ENV}
+            if [ "${TERRAFORM_ACTION}" = "plan" ]; then
+              terraform plan -input=false -var-file="environments/${TERRAFORM_ENV}.tfvars" -out=tfplan
+            else
+              terraform apply -input=false -auto-approve -var-file="environments/${TERRAFORM_ENV}.tfvars"
+              terraform output
+            fi
+          '''
+        }
+      }
+      post {
+        always {
+          dir('infra/localstack') {
+            sh 'docker compose down || true'
+          }
+        }
       }
     }
     stage('Build') {

@@ -87,6 +87,35 @@ If your cluster is already up:
 - `kubectl apply -f k8s/apps/netflix`
 - `kubectl apply -f k8s/apps/slack`
 
+## Mock AWS Infrastructure (LocalStack + Terraform)
+
+- Start the LocalStack emulator with `start-up/localstack-up.sh` (uses `infra/localstack/docker-compose.yml`).
+- Provision the mock VPC, IAM, and registries with Terraform from `infra/terraform/`:
+  - `terraform init`
+  - `terraform workspace select localstack || terraform workspace new localstack`
+  - `terraform apply -auto-approve -var-file=environments/localstack.tfvars`
+- Outputs advertise the VPC, subnet, and IAM details a real EKS control plane would expect. Use them to wire additional automation or document lab assumptions.
+- Tear everything down via `start-up/localstack-down.sh -v` when finished.
+
+### Jenkins controller (local Docker)
+
+- Bring up Jenkins with all required tooling via `docker compose -f infra/jenkins/docker-compose.yml up -d --build`.
+- The container mounts the repo at `/workspace`, binds the Docker socket, and includes `kind`, `kubectl`, `terraform`, and `yq`, so pipelines can run the same scripts used locally.
+- Shut it down with `docker compose -f infra/jenkins/docker-compose.yml down`; state persists in the `jenkins_home` volume.
+
+### Jenkins + Terraform workflow
+
+- Pipeline controls:
+  - `BOOTSTRAP_KIND` – run `start-up/cluster-up.sh` and optionally seed namespaces/components.
+  - `DEPLOY_INFRA`, `DEPLOY_MONITORING`, `DEPLOY_CICD` – toggle which cluster add-ons apply during bootstrapping.
+  - `TF_ENV` – selects the Terraform workspace and matching `environments/<env>.tfvars` file (default `localstack`).
+  - `TF_ACTION` – choose between `plan` and `apply` for the infrastructure stage.
+  - `SKIP_TERRAFORM` – bypass mock AWS provisioning (useful for app-only builds).
+- The pipeline stages run in this order:
+  1. Bootstrap kind (if enabled).
+  2. Start LocalStack, run Terraform plan/apply, capture outputs, tear LocalStack down.
+  3. Build, push, and roll out the selected app, then handle TLS simulations if requested.
+
 ### Failure injection examples
 
 All apps support simple, controlled failures through environment variables on their Deployment:

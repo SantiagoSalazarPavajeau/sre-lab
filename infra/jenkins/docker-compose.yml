@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  jenkins:
+    build: .
+    container_name: sre-lab-jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../..:/workspace
+    working_dir: /workspace
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:

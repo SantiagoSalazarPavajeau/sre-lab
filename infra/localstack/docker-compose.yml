@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  localstack:
+    image: localstack/localstack:2.3
+    container_name: sre-lab-localstack
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - SERVICES=iam,ec2,s3,ecr,sts,cloudwatch,logs
+      - DEBUG=0
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_DEFAULT_REGION=us-east-1
+      - LOCALSTACK_PERSISTENCE=1
+    volumes:
+      - ./data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
