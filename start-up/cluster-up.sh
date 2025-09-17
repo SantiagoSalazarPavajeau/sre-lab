@@ -29,6 +29,6 @@ if docker network inspect kind >/dev/null 2>&1; then
 fi
 
 mkdir -p "$(dirname "${KUBECONFIG_FILE}")"
-kind export kubeconfig --name "${CLUSTER_NAME}" --kubeconfig "${KUBECONFIG_FILE}" --internal >/dev/null
+kind get kubeconfig --name "${CLUSTER_NAME}" --internal > "${KUBECONFIG_FILE}"
 
 "${ROOT}/start-up/kube-wait.sh"
