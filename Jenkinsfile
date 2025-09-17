@@ -1,5 +1,8 @@
 pipeline {
   agent any
+  options {
+    skipDefaultCheckout(true)
+  }
   parameters {
     choice(name: 'APP_NAME', choices: ['app', 'facebook', 'netflix', 'slack'], description: 'Which mock app to build/deploy')
     booleanParam(name: 'SKIP_TERRAFORM', defaultValue: false, description: 'Skip Terraform provisioning stage')
