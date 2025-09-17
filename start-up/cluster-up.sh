@@ -18,4 +18,16 @@ else
   echo "Kind cluster '${CLUSTER_NAME}' already exists"
 fi
 
+echo "Waiting for Kubernetes API to respond..."
+for attempt in $(seq 1 30); do
+  if kubectl get nodes >/dev/null 2>&1; then
+    break
+  fi
+  echo "  attempt ${attempt}/30: API not yet reachable; sleeping 5s"
+  sleep 5
+done
+
+echo "Ensuring kind nodes are Ready..."
+kubectl wait --for=condition=Ready nodes --all --timeout=180s >/dev/null
+
 echo "Cluster '${CLUSTER_NAME}' is ready."
