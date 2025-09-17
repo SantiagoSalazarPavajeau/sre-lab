@@ -37,7 +37,7 @@ RUN curl -fsSLo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/down
 # Allow Jenkins to talk to the host Docker daemon
 RUN groupadd -g 999 docker || true && usermod -aG docker jenkins
 
-RUN set -euo pipefail; \
+RUN set -e; \
     arch=$(dpkg --print-architecture); \
     case "$arch" in \
       amd64) compose_arch="x86_64" ;; \
