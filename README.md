@@ -99,7 +99,7 @@ If your cluster is already up:
 
 ### Jenkins controller (local Docker)
 
-- Bring up Jenkins with all required tooling via `docker compose -f infra/jenkins/docker-compose.yml up -d --build`. Jenkins inherits your `~/.ssh` directory, so ensure `github.com` is in `known_hosts` first (`ssh-keyscan github.com >> ~/.ssh/known_hosts`). The entrypoint automatically matches the container `docker` group to the socket (`/var/run/docker.sock` by default). For Colima use `docker --context colima compose` if your default context is elsewhere.
+- Bring up Jenkins with all required tooling via `docker compose -f infra/jenkins/docker-compose.yml up -d --build`. Jenkins inherits your `~/.ssh` directory (mounted to `/var/jenkins_home/.ssh`), so ensure `github.com` is in `known_hosts` first (`ssh-keyscan github.com >> ~/.ssh/known_hosts`). The entrypoint automatically matches the container `docker` group to the socket (`/var/run/docker.sock` by default). For Colima use `docker --context colima compose` if your default context is elsewhere.
 - The container mounts the repo at `/workspace`, binds the Docker socket, and includes `kind`, `kubectl`, `terraform`, and `yq`, so pipelines can run the same scripts used locally.
 - Shut it down with `docker compose -f infra/jenkins/docker-compose.yml down`; state persists in the `jenkins_home` volume.
 

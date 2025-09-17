@@ -13,7 +13,7 @@ services:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
       - ../..:/workspace
-      - ~/.ssh:/home/jenkins/.ssh
+      - ~/.ssh:/var/jenkins_home/.ssh
     group_add:
       - "${DOCKER_GID:-0}"
     working_dir: /workspace
