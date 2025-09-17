@@ -99,6 +99,19 @@ If your cluster is already up:
 
 ### Jenkins controller (local Docker)
 
+- Point the stack at your Docker socket:
+  - Docker Desktop (default):
+    ```bash
+    export DOCKER_SOCKET=/var/run/docker.sock
+    export DOCKER_GID=$(stat -f '%g' $DOCKER_SOCKET)
+    ```
+  - Colima (default profile):
+    ```bash
+    export DOCKER_SOCKET="$HOME/.colima/default/docker.sock"
+    export DOCKER_GID=$(stat -f '%g' $DOCKER_SOCKET)
+    export DOCKER_HOST="unix://$DOCKER_SOCKET"
+    ```
+  - Linux: replace `stat -f` with `stat -c`.
 - Bring up Jenkins with all required tooling via `docker compose -f infra/jenkins/docker-compose.yml up -d --build`.
 - The container mounts the repo at `/workspace`, binds the Docker socket, and includes `kind`, `kubectl`, `terraform`, and `yq`, so pipelines can run the same scripts used locally.
 - Shut it down with `docker compose -f infra/jenkins/docker-compose.yml down`; state persists in the `jenkins_home` volume.
