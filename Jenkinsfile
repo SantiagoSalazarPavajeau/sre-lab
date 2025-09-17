@@ -70,11 +70,21 @@ fi
     stage('Provision Infrastructure') {
       when { expression { return !params.SKIP_TERRAFORM } }
       steps {
+        script {
+          env.LOCALSTACK_ENDPOINT = 'http://localstack:4566'
+        }
         dir('infra/localstack') {
           sh 'docker compose up -d'
           sh '''#!/usr/bin/env bash
 set -euo pipefail
-./wait-for-localstack.sh
+container_id=$(docker compose ps -q localstack)
+if [ -n "$container_id" ]; then
+  networks=$(docker container inspect "$container_id" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}')
+  for net in $networks; do
+    docker network connect "$net" $(hostname) >/dev/null 2>&1 || true
+  done
+fi
+./wait-for-localstack.sh "$LOCALSTACK_ENDPOINT"
 '''
         }
         dir('infra/terraform') {
@@ -83,9 +93,9 @@ set -euo pipefail
 terraform init -input=false
 terraform workspace select ${TERRAFORM_ENV} || terraform workspace new ${TERRAFORM_ENV}
 if [ "${TERRAFORM_ACTION}" = "plan" ]; then
-  terraform plan -input=false -var-file="environments/${TERRAFORM_ENV}.tfvars" -out=tfplan
+  terraform plan -input=false -var-file="environments/${TERRAFORM_ENV}.tfvars" -var="localstack_endpoint=${LOCALSTACK_ENDPOINT}" -out=tfplan
 else
-  terraform apply -input=false -auto-approve -var-file="environments/${TERRAFORM_ENV}.tfvars"
+  terraform apply -input=false -auto-approve -var-file="environments/${TERRAFORM_ENV}.tfvars" -var="localstack_endpoint=${LOCALSTACK_ENDPOINT}"
   terraform output
 fi
           '''
