@@ -7,7 +7,7 @@ MAX_ATTEMPTS=${LOCALSTACK_MAX_ATTEMPTS:-60}
 SLEEP_SECONDS=${LOCALSTACK_SLEEP_SECONDS:-5}
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
-  if OUTPUT=$(curl -fsS "$HEALTH_ENDPOINT" 2>/dev/null); then
+  if OUTPUT=$(curl -fsS -k "$HEALTH_ENDPOINT" 2>/dev/null); then
     if echo "$OUTPUT" | grep -q '"ready": *true'; then
       echo "LocalStack is ready"
       exit 0

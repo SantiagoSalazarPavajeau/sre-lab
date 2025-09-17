@@ -14,6 +14,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - AWS_DEFAULT_REGION=us-east-1
       - LOCALSTACK_PERSISTENCE=1
+      - LOCALSTACK_DISABLE_SSL=1
     volumes:
       - ./data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock

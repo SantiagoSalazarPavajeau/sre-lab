@@ -111,6 +111,11 @@ fi
         always {
           dir('infra/localstack') {
             sh 'docker compose down || true'
+            sh '''#!/usr/bin/env bash
+set -euo pipefail
+network_name="localstack_default"
+docker network disconnect "$network_name" $(hostname) >/dev/null 2>&1 || true
+'''
           }
         }
       }
