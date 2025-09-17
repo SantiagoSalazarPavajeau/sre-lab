@@ -72,6 +72,10 @@ fi
       steps {
         dir('infra/localstack') {
           sh 'docker compose up -d'
+          sh '''#!/usr/bin/env bash
+set -euo pipefail
+./wait-for-localstack.sh
+'''
         }
         dir('infra/terraform') {
           sh '''#!/usr/bin/env bash

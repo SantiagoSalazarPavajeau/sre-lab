@@ -10,7 +10,6 @@ provider "aws" {
     ec2            = var.localstack_endpoint
     elasticache    = var.localstack_endpoint
     iam            = var.localstack_endpoint
-    logs           = var.localstack_endpoint
     s3             = var.localstack_endpoint
     sns            = var.localstack_endpoint
     sqs            = var.localstack_endpoint
