@@ -12,7 +12,6 @@ pipeline {
     booleanParam(name: 'DEPLOY_MONITORING', defaultValue: false, description: 'Deploy monitoring stack after infra is ready')
     booleanParam(name: 'DEPLOY_CICD', defaultValue: false, description: 'Deploy cluster-side CI/CD components (e.g., Argo)')
   }
-  environment { }
   stages {
     stage('Checkout') { steps { checkout scm } }
     stage('Prepare Vars') {
