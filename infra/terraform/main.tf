@@ -126,7 +126,7 @@ resource "aws_security_group" "nodes" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "Allow node to node traffic"
+    description = "Allow node-to-node traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -134,7 +134,7 @@ resource "aws_security_group" "nodes" {
   }
 
   ingress {
-    description = "Allow control plane -> nodes"
+    description = "Allow control-plane-to-node traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
