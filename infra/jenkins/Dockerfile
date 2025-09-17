@@ -37,6 +37,10 @@ RUN curl -fsSLo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/down
 # Allow Jenkins to talk to the host Docker daemon
 RUN groupadd -g 999 docker || true && usermod -aG docker jenkins
 
+RUN mkdir -p /usr/libexec/docker/cli-plugins && \
+    curl -fsSL "https://github.com/docker/compose/releases/download/v2.27.3/docker-compose-linux-$(dpkg --print-architecture)" -o /usr/libexec/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
