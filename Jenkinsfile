@@ -20,6 +20,7 @@ pipeline {
     stage('Checkout') {
       steps {
         script {
+          deleteDir()
           env.BRANCH = (params.BRANCH && params.BRANCH.trim()) ? params.BRANCH.trim() : 'main'
           checkout([
             $class: 'GitSCM',
