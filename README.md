@@ -60,7 +60,7 @@ Monitoring discovers app services dynamically via Kubernetes service discovery (
   - `APP=netflix start-up/quickstart.sh`
   - `APP=slack start-up/quickstart.sh`
 
-- With port-forwards (Prometheus 9090, Grafana 3000, selected app 8080):
+- With port-forwards (Prometheus 9090, Grafana 3001, selected app 8080):
   - `PORT_FORWARD=1 APP=facebook start-up/quickstart.sh`
 
 The script builds `src/services/$APP`, tags it as `sre-lab-$APP:latest`, loads it into kind, applies `k8s/` and `k8s/apps/$APP`. For more granular control, use the decoupled scripts above.
@@ -96,10 +96,11 @@ If your cluster is already up:
   - `terraform apply -auto-approve -var-file=environments/localstack.tfvars`
 - Outputs advertise the VPC, subnet, and IAM details a real EKS control plane would expect. Use them to wire additional automation or document lab assumptions.
 - Tear everything down via `start-up/localstack-down.sh -v` when finished.
+- All Kubernetes scripts produce a dedicated kubeconfig at `.kind-kubeconfig` and export it automatically, so Jenkins and local workflows share a consistent API endpoint even when kind runs inside a container.
 
 ### Jenkins controller (local Docker)
 
-- Bring up Jenkins with all required tooling via `docker compose -f infra/jenkins/docker-compose.yml up -d --build`.
+- Bring up Jenkins with all required tooling via `docker compose -f infra/jenkins/docker-compose.yml up -d --build`. Jenkins inherits your `~/.ssh` directory (mounted to `/var/jenkins_home/.ssh`), so ensure `github.com` is in `known_hosts` first (`ssh-keyscan github.com >> ~/.ssh/known_hosts`). The entrypoint automatically matches the container `docker` group to the socket (`/var/run/docker.sock` by default). For Colima use `docker --context colima compose` if your default context is elsewhere.
 - The container mounts the repo at `/workspace`, binds the Docker socket, and includes `kind`, `kubectl`, `terraform`, and `yq`, so pipelines can run the same scripts used locally.
 - Shut it down with `docker compose -f infra/jenkins/docker-compose.yml down`; state persists in the `jenkins_home` volume.
 
@@ -111,6 +112,7 @@ If your cluster is already up:
   - `TF_ENV` – selects the Terraform workspace and matching `environments/<env>.tfvars` file (default `localstack`).
   - `TF_ACTION` – choose between `plan` and `apply` for the infrastructure stage.
   - `SKIP_TERRAFORM` – bypass mock AWS provisioning (useful for app-only builds).
+- kubeconfig for the kind cluster is written to `.kind-kubeconfig`; all `start-up/*.sh` helpers export this path so subsequent `kubectl` commands (including Jenkins stages) hit the correct API endpoint.
 - The pipeline stages run in this order:
   1. Bootstrap kind (if enabled).
   2. Start LocalStack, run Terraform plan/apply, capture outputs, tear LocalStack down.

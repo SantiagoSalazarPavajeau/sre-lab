@@ -126,7 +126,7 @@ resource "aws_security_group" "nodes" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "Allow node to node traffic"
+    description = "Allow node-to-node traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -134,7 +134,7 @@ resource "aws_security_group" "nodes" {
   }
 
   ingress {
-    description = "Allow control plane -> nodes"
+    description = "Allow control-plane-to-node traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -249,14 +249,6 @@ resource "aws_iam_role_policy" "node" {
   policy = data.aws_iam_policy_document.node_policy.json
 }
 
-resource "aws_ecr_repository" "apps" {
-  name                 = "${var.cluster_name}/apps"
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
-
-  tags = var.tags
-}
-
 resource "aws_s3_bucket" "artefacts" {
   bucket = "${var.cluster_name}-artefacts"
 
@@ -304,11 +296,6 @@ output "cluster_role_arn" {
 output "node_role_arn" {
   description = "IAM role for the node group"
   value       = aws_iam_role.nodes.arn
-}
-
-output "ecr_repository_url" {
-  description = "ECR repository for lab container images"
-  value       = aws_ecr_repository.apps.repository_url
 }
 
 output "artefact_bucket" {

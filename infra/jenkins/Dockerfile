@@ -5,6 +5,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    docker.io \
     git \
     jq \
     lsb-release \
@@ -36,7 +37,24 @@ RUN curl -fsSLo /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/down
 # Allow Jenkins to talk to the host Docker daemon
 RUN groupadd -g 999 docker || true && usermod -aG docker jenkins
 
-USER jenkins
+RUN set -e; \
+    arch=$(dpkg --print-architecture); \
+    case "$arch" in \
+      amd64) compose_arch="x86_64" ;; \
+      arm64) compose_arch="aarch64" ;; \
+      armhf) compose_arch="armv7" ;; \
+      *) compose_arch="$arch" ;; \
+    esac; \
+    mkdir -p /usr/libexec/docker/cli-plugins && \
+    curl -fsSL "https://github.com/docker/compose/releases/download/v2.27.3/docker-compose-linux-${compose_arch}" -o /usr/libexec/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+USER root
 
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["/usr/bin/tini", "--", "/usr/local/bin/jenkins.sh"]

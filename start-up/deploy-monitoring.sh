@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
+KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
+export KUBECONFIG="${KUBECONFIG_FILE}"
+
 echo "Deploying monitoring stack (Prometheus, Grafana, Alertmanager, exporters)..."
 kubectl apply -f k8s/monitoring/
 

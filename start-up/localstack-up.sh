@@ -10,7 +10,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if ! docker compose version >/dev/null 2>&1; then
-  echo "docker compose plugin is required (docker compose v2)" >&2
+  echo "docker compose plugin is required (Docker CLI v2)" >&2
   exit 1
 fi
 
