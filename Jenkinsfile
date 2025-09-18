@@ -99,17 +99,18 @@ LOCALSTACK_SLEEP_SECONDS=${LOCALSTACK_SLEEP_SECONDS:-5} \
               sh 'docker compose logs localstack || true'
               error 'LocalStack failed to become ready'
             }
-            if (fileExists('.localstack_tmp')) {
-              def content = readFile('.localstack_tmp').trim()
+            if (fileExists("${WORKSPACE}/.localstack_tmp")) {
+              def content = readFile("${WORKSPACE}/.localstack_tmp").trim()
               content.split('\n').each { line ->
                 def parts = line.split('=')
                 if (parts.size() == 2 && parts[0] == 'LOCALSTACK_ENDPOINT_INTERNAL') {
                   env.LOCALSTACK_ENDPOINT = parts[1]
                 }
               }
-              sh 'rm -f .localstack_tmp'
+              sh "rm -f ${WORKSPACE}/.localstack_tmp"
             }
             env.LOCALSTACK_ENDPOINT = env.LOCALSTACK_ENDPOINT ?: 'http://localhost:4566'
+            echo "[jenkins] LOCALSTACK_ENDPOINT resolved to ${env.LOCALSTACK_ENDPOINT}"
           }
         }
         dir('infra/terraform') {
