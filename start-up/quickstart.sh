@@ -34,8 +34,8 @@ if [ "$PORT_FORWARD" = "1" ]; then
   # Prometheus 9090
   kubectl -n monitoring port-forward svc/prometheus 9090:9090 >/dev/null 2>&1 &
   echo $! > .scripts/pf_prometheus.pid
-  # Grafana 3000
-  kubectl -n monitoring port-forward svc/grafana 3000:3000 >/dev/null 2>&1 &
+  # Grafana 3001
+  kubectl -n monitoring port-forward svc/grafana 3001:3001 >/dev/null 2>&1 &
   echo $! > .scripts/pf_grafana.pid
   # cAdvisor 8081 -> 8080
   kubectl -n monitoring port-forward svc/cadvisor 8081:8080 >/dev/null 2>&1 &

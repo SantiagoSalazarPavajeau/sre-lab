@@ -60,7 +60,7 @@ Monitoring discovers app services dynamically via Kubernetes service discovery (
   - `APP=netflix start-up/quickstart.sh`
   - `APP=slack start-up/quickstart.sh`
 
-- With port-forwards (Prometheus 9090, Grafana 3000, selected app 8080):
+- With port-forwards (Prometheus 9090, Grafana 3001, selected app 8080):
   - `PORT_FORWARD=1 APP=facebook start-up/quickstart.sh`
 
 The script builds `src/services/$APP`, tags it as `sre-lab-$APP:latest`, loads it into kind, applies `k8s/` and `k8s/apps/$APP`. For more granular control, use the decoupled scripts above.
