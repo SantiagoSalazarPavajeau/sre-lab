@@ -78,12 +78,34 @@ fi
           script {
             def status = sh(returnStatus: true, script: '''#!/usr/bin/env bash
 set -euo pipefail
+container_id=$(docker compose ps -q localstack)
 endpoint=${LOCALSTACK_ENDPOINT:-http://localhost:4566}
+if [ -n "$container_id" ]; then
+  networks=$(docker container inspect "$container_id" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}')
+  for net in $networks; do
+    docker network connect "$net" $(hostname) >/dev/null 2>&1 || true
+  done
+  container_ip=$(docker container inspect "$container_id" --format '{{range $name, $conf := .NetworkSettings.Networks}}{{$conf.IPAddress}}{{" "}}{{end}}' | awk '{print $1}')
+  if [ -n "$container_ip" ]; then
+    echo "LOCALSTACK_ENDPOINT_INTERNAL=http://$container_ip:4566" >> "$WORKSPACE/.localstack_tmp"
+    endpoint="http://$container_ip:4566"
+  fi
+fi
 ./wait-for-localstack.sh "$endpoint"
 ''')
             if (status != 0) {
               sh 'docker compose logs localstack || true'
               error 'LocalStack failed to become ready'
+            }
+            if (fileExists('.localstack_tmp')) {
+              def content = readFile('.localstack_tmp').trim()
+              content.split('\n').each { line ->
+                def parts = line.split('=')
+                if (parts.size() == 2 && parts[0] == 'LOCALSTACK_ENDPOINT_INTERNAL') {
+                  env.LOCALSTACK_ENDPOINT = parts[1]
+                }
+              }
+              sh 'rm -f .localstack_tmp'
             }
             env.LOCALSTACK_ENDPOINT = env.LOCALSTACK_ENDPOINT ?: 'http://localhost:4566'
           }
