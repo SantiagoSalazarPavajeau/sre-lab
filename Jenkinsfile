@@ -14,6 +14,7 @@ pipeline {
     booleanParam(name: 'DEPLOY_INFRA', defaultValue: true, description: 'Apply baseline namespaces and infrastructure manifests')
     booleanParam(name: 'DEPLOY_MONITORING', defaultValue: true, description: 'Deploy monitoring stack after infra is ready')
     booleanParam(name: 'DEPLOY_CICD', defaultValue: true, description: 'Deploy cluster-side CI/CD components (e.g., Argo)')
+    booleanParam(name: 'PUSH_MANIFEST', defaultValue: false, description: 'Commit and push manifest updates back to Git')
     booleanParam(name: 'SIMULATE_TLS_OUTAGE', defaultValue: false, description: 'Run TLS outage simulation stage')
     choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
   }
@@ -53,6 +54,7 @@ pipeline {
           env.DEPLOY_INFRA = params.DEPLOY_INFRA ? 'true' : 'false'
           env.DEPLOY_MONITORING = params.DEPLOY_MONITORING ? 'true' : 'false'
           env.DEPLOY_CICD = params.DEPLOY_CICD ? 'true' : 'false'
+          env.PUSH_MANIFEST = params.PUSH_MANIFEST ? 'true' : 'false'
           env.GIT_COMMIT_SHORT = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : 'localdev'
         }
         sh 'echo Using APP_NAME=${APP_NAME} IMAGE=${IMAGE} K8S_MANIFEST=${K8S_MANIFEST}'
@@ -171,13 +173,14 @@ docker push "${IMAGE}:${GIT_COMMIT_SHORT}"
       }
     }
     stage('Update Manifests') {
+      when { expression { return env.PUSH_MANIFEST == 'true' } }
       steps {
         sh """
           yq e -i '.spec.template.spec.containers[0].image = \"${IMAGE}:${GIT_COMMIT_SHORT}\"' ${K8S_MANIFEST}
           git config user.email "ci@example.com"
           git config user.name "ci-bot"
           git add ${K8S_MANIFEST}
-          git commit -m "ci: deploy image ${GIT_COMMIT_SHORT}"
+          git commit -m "ci: deploy image ${GIT_COMMIT_SHORT}" || echo "[info] nothing to commit"
           git push origin HEAD:main
         """
       }
