@@ -23,6 +23,12 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
         echo "LocalStack is ready (via $endpoint status)"
         exit 0
       fi
+      if echo "$OUTPUT" | grep -q '"services"'; then
+        if ! echo "$OUTPUT" | grep -Eiq '"(unavailable|initializing|disabled)"'; then
+          echo "LocalStack is ready (via $endpoint services)"
+          exit 0
+        fi
+      fi
     fi
   done
   echo "Waiting for LocalStack ($attempt/$MAX_ATTEMPTS)"
