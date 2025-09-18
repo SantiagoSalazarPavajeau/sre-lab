@@ -9,6 +9,7 @@ pipeline {
     booleanParam(name: 'SKIP_TERRAFORM', defaultValue: false, description: 'Skip Terraform provisioning stage')
     choice(name: 'TF_ACTION', choices: ['apply', 'plan'], description: 'Terraform action to run')
     string(name: 'TF_ENV', defaultValue: 'localstack', description: 'Terraform workspace/tfvars name under infra/terraform/environments')
+    string(name: 'IMAGE_REGISTRY', defaultValue: '', description: 'Container registry prefix (e.g. docker.io/org). Leave blank for local-only builds')
     booleanParam(name: 'BOOTSTRAP_KIND', defaultValue: true, description: 'Create or update the local kind cluster before deploying')
     booleanParam(name: 'DEPLOY_INFRA', defaultValue: true, description: 'Apply baseline namespaces and infrastructure manifests')
     booleanParam(name: 'DEPLOY_MONITORING', defaultValue: true, description: 'Deploy monitoring stack after infra is ready')
@@ -35,7 +36,15 @@ pipeline {
       steps {
         script {
           env.APP_NAME = params.APP_NAME ?: 'app'
-          env.IMAGE = "docker.io/<your-registry>/sre-lab-${env.APP_NAME}"
+          def registry = params.IMAGE_REGISTRY ? params.IMAGE_REGISTRY.trim() : ''
+          env.IMAGE_REGISTRY = registry
+          env.REGISTRY_LOGIN_HOST = ''
+          if (registry) {
+            def slashIdx = registry.indexOf('/')
+            env.REGISTRY_LOGIN_HOST = (slashIdx > 0) ? registry.substring(0, slashIdx) : registry
+          }
+          env.IMAGE = registry ? "${registry}/sre-lab-${env.APP_NAME}" : "sre-lab-${env.APP_NAME}"
+          env.PUSH_IMAGE = registry ? 'true' : 'false'
           env.K8S_MANIFEST = (env.APP_NAME == 'app') ? 'k8s/app/app-deployment.yaml' : "k8s/apps/${env.APP_NAME}/deployment.yaml"
           env.BRANCH = (params.BRANCH && params.BRANCH.trim()) ? params.BRANCH.trim() : 'main'
           env.TERRAFORM_ENV = (params.TF_ENV && params.TF_ENV.trim()) ? params.TF_ENV.trim() : 'localstack'
@@ -146,10 +155,18 @@ docker network disconnect "$network_name" $(hostname) >/dev/null 2>&1 || true
       }
     }
     stage('Push') {
+      when { expression { return env.PUSH_IMAGE == 'true' } }
       steps {
         withCredentials([usernamePassword(credentialsId: 'registry-creds', usernameVariable: 'REG_USR', passwordVariable: 'REG_PSW')]) {
-          sh 'echo $REG_PSW | docker login docker.io -u $REG_USR --password-stdin'
-          sh 'docker push ${IMAGE}:${GIT_COMMIT_SHORT}'
+          sh '''#!/usr/bin/env bash
+set -euo pipefail
+if [ -n "${REGISTRY_LOGIN_HOST}" ]; then
+  echo "$REG_PSW" | docker login "${REGISTRY_LOGIN_HOST}" -u "$REG_USR" --password-stdin
+else
+  echo "$REG_PSW" | docker login -u "$REG_USR" --password-stdin
+fi
+docker push "${IMAGE}:${GIT_COMMIT_SHORT}"
+'''
         }
       }
     }
