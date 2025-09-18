@@ -91,6 +91,8 @@ if [ -n "$container_id" ]; then
     endpoint="http://$container_ip:4566"
   fi
 fi
+LOCALSTACK_MAX_ATTEMPTS=${LOCALSTACK_MAX_ATTEMPTS:-60} \
+LOCALSTACK_SLEEP_SECONDS=${LOCALSTACK_SLEEP_SECONDS:-5} \
 ./wait-for-localstack.sh "$endpoint"
 ''')
             if (status != 0) {
