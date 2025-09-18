@@ -14,5 +14,7 @@ services:
       - AWS_DEFAULT_REGION=us-east-1
       - LOCALSTACK_PERSISTENCE=1
       - LS_DISABLE_SSL=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
       - ./data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
