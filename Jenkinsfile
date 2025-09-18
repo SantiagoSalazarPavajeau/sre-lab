@@ -71,47 +71,21 @@ fi
       when { expression { return !params.SKIP_TERRAFORM } }
       steps {
         script {
-          env.LOCALSTACK_ENDPOINT = 'http://localstack:4566'
+          env.LOCALSTACK_ENDPOINT = 'http://localhost:4566'
         }
         dir('infra/localstack') {
           sh 'docker compose up -d'
           script {
             def status = sh(returnStatus: true, script: '''#!/usr/bin/env bash
 set -euo pipefail
-container_id=$(docker compose ps -q localstack)
-if [ -n "$container_id" ]; then
-  networks=$(docker container inspect "$container_id" --format '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}} {{end}}')
-  for net in $networks; do
-    docker network connect "$net" $(hostname) >/dev/null 2>&1 || true
-  done
-  container_ip=$(docker container inspect "$container_id" --format '{{range $name, $conf := .NetworkSettings.Networks}}{{$conf.IPAddress}}{{" "}}{{end}}' | awk '{print $1}')
-  if [ -n "$container_ip" ]; then
-    echo "LOCALSTACK_ENDPOINT_INTERNAL=http://$container_ip:4566" >> "$WORKSPACE/.localstack_tmp"
-  fi
-fi
-endpoint=${LOCALSTACK_ENDPOINT}
-if [ -f "$WORKSPACE/.localstack_tmp" ]; then
-  source "$WORKSPACE/.localstack_tmp"
-  if [ -n "${LOCALSTACK_ENDPOINT_INTERNAL:-}" ]; then
-    endpoint=$LOCALSTACK_ENDPOINT_INTERNAL
-  fi
-fi
+endpoint=${LOCALSTACK_ENDPOINT:-http://localhost:4566}
 ./wait-for-localstack.sh "$endpoint"
 ''')
             if (status != 0) {
               sh 'docker compose logs localstack || true'
               error 'LocalStack failed to become ready'
             }
-            if (fileExists('.localstack_tmp')) {
-              def content = readFile('.localstack_tmp').trim()
-              content.split('\n').each { line ->
-                def parts = line.split('=')
-                if (parts.size() == 2 && parts[0] == 'LOCALSTACK_ENDPOINT_INTERNAL') {
-                  env.LOCALSTACK_ENDPOINT = parts[1]
-                }
-              }
-              sh 'rm -f .localstack_tmp'
-            }
+            env.LOCALSTACK_ENDPOINT = env.LOCALSTACK_ENDPOINT ?: 'http://localhost:4566'
           }
         }
         dir('infra/terraform') {
