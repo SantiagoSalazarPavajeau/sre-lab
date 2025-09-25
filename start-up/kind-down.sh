@@ -24,6 +24,10 @@ if [ -d .scripts ]; then
   rmdir .scripts 2>/dev/null || true
 fi
 
+# Stop LocalStack if running
+echo "Stopping LocalStack (if running)..."
+start-up/localstack-down.sh || true
+
 # Delete the kind cluster
 if kind get clusters | grep -q "^${CLUSTER_NAME}$"; then
   echo "Deleting kind cluster '${CLUSTER_NAME}'..."
