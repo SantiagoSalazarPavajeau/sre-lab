@@ -13,7 +13,7 @@ pipeline {
     booleanParam(name: 'BOOTSTRAP_KIND', defaultValue: true, description: 'Create or update the local kind cluster before deploying')
     booleanParam(name: 'DEPLOY_INFRA', defaultValue: true, description: 'Apply baseline namespaces and infrastructure manifests')
     booleanParam(name: 'DEPLOY_MONITORING', defaultValue: true, description: 'Deploy monitoring stack after infra is ready')
-    booleanParam(name: 'DEPLOY_CICD', defaultValue: true, description: 'Deploy cluster-side CI/CD components (e.g., Argo)')
+    
     booleanParam(name: 'PUSH_MANIFEST', defaultValue: false, description: 'Commit and push manifest updates back to Git')
     booleanParam(name: 'SIMULATE_TLS_OUTAGE', defaultValue: false, description: 'Run TLS outage simulation stage')
     choice(name: 'TLS_ACTION', choices: ['prepare', 'outage', 'recover'], description: 'TLS simulation action')
@@ -53,7 +53,7 @@ pipeline {
           env.BOOTSTRAP_KIND = params.BOOTSTRAP_KIND ? 'true' : 'false'
           env.DEPLOY_INFRA = params.DEPLOY_INFRA ? 'true' : 'false'
           env.DEPLOY_MONITORING = params.DEPLOY_MONITORING ? 'true' : 'false'
-          env.DEPLOY_CICD = params.DEPLOY_CICD ? 'true' : 'false'
+          
           env.PUSH_MANIFEST = params.PUSH_MANIFEST ? 'true' : 'false'
           env.GIT_COMMIT_SHORT = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : 'localdev'
         }
@@ -72,9 +72,7 @@ fi
 if [ "${DEPLOY_MONITORING}" = "true" ]; then
   start-up/deploy-monitoring.sh
 fi
-if [ "${DEPLOY_CICD}" = "true" ]; then
-  start-up/deploy-cicd.sh
-fi
+        
         '''
       }
     }

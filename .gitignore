@@ -1,2 +1,32 @@
+# Local helper artifacts
 .scripts/
 .kind-kubeconfig
+.localstack_tmp
+architecture.md
+
+# LocalStack data
+infra/localstack/data/
+
+# Terraform (keep lock file tracked)
+**/.terraform/
+**/.terraform/*
+**/terraform.tfstate
+**/terraform.tfstate.*
+**/terraform.tfstate.d/
+**/crash.log
+**/*.tfplan
+!**/.terraform.lock.hcl
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
