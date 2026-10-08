@@ -27,7 +27,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
         - name: netflix
-          image: sre-lab-netflix:latest
+          image: sre-lab-netflix:metrics-init-v1
           imagePullPolicy: IfNotPresent
           env:
             - name: APP_NAME
@@ -47,6 +47,8 @@ kind: Service
 metadata:
   name: netflix
   namespace: app
+  labels:
+    app: netflix
 spec:
   ports:
     - name: http

@@ -1,4 +1,4 @@
-from http.server import SimpleHTTPRequestHandler, HTTPServer
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 import os
 import random
@@ -14,6 +14,8 @@ LATENCY_MS = int(os.getenv("LATENCY_MS", "0"))
 REQUESTS = Counter('app_requests_total', 'Total HTTP requests', ['app', 'path'])
 ERRORS = Counter('app_request_errors_total', 'HTTP error responses', ['app', 'path'])
 LATENCY = Histogram('app_request_duration_seconds', 'Request latency', ['app', 'path'])
+REQUESTS.labels(APP_NAME, "/")
+ERRORS.labels(APP_NAME, "/")
 
 
 def maybe_fail(path: str):
@@ -62,7 +64,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def run_server():
-    server = HTTPServer(('0.0.0.0', 8080), Handler)
+    server = ThreadingHTTPServer(('0.0.0.0', 8080), Handler)
     print(f'Starting {APP_NAME} server on 0.0.0.0:8080')
     server.serve_forever()
 

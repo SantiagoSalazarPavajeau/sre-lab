@@ -16,4 +16,5 @@ data:
     receivers:
       - name: 'slack'
         webhook_configs:
-          - url: 'http://example.com/alert' # replace with real endpoint in production
+          - url: 'http://alert-receiver:8080/alert'
+            send_resolved: true
