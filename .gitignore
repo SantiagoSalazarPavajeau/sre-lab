@@ -2,7 +2,6 @@
 .scripts/
 .kind-kubeconfig
 .localstack_tmp
-architecture.md
 
 # LocalStack data
 infra/localstack/data/
@@ -30,3 +29,9 @@ venv/
 .vscode/
 *.swp
 *.swo
+
+.kind-kubeconfig-host
+.kind-kubeconfig-internal
+
+# Local TLS fixtures contain private keys.
+scripts/certs/
