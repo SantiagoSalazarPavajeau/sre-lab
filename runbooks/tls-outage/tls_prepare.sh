@@ -1,27 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 NS=${NS:-app}
-CERT_DIR=${CERT_DIR:-$(pwd)/scripts/certs}
-COMMON_NAME=${COMMON_NAME:-app.local}
+export CERT_DIR=${CERT_DIR:-$ROOT/scripts/certs}
 
-mkdir -p "$CERT_DIR"
+bash "$ROOT/runbooks/tls-outage/tls_generate.sh"
 
 echo "[+] Ensuring namespace '$NS' exists"
 kubectl get ns "$NS" >/dev/null 2>&1 || kubectl create ns "$NS"
-
-echo "[+] Generating valid self-signed certificate for CN=$COMMON_NAME"
-openssl req -x509 -nodes -newkey rsa:2048 \
-  -keyout "$CERT_DIR/valid.key" \
-  -out "$CERT_DIR/valid.crt" \
-  -subj "/CN=$COMMON_NAME" -days 365 >/dev/null 2>&1
-
-echo "[+] Generating expired self-signed certificate for CN=$COMMON_NAME"
-# Using -days 0 yields a certificate that expires immediately (Not After == Not Before)
-openssl req -x509 -nodes -newkey rsa:2048 \
-  -keyout "$CERT_DIR/expired.key" \
-  -out "$CERT_DIR/expired.crt" \
-  -subj "/CN=$COMMON_NAME" -days 0 >/dev/null 2>&1 || true
 
 echo "[+] Creating/Updating TLS secret 'app-tls' with VALID cert"
 kubectl -n "$NS" create secret tls app-tls \
@@ -29,7 +16,10 @@ kubectl -n "$NS" create secret tls app-tls \
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo "[+] Applying TLS proxy manifests"
-kubectl apply -f k8s/app/tls-proxy.yaml
+kubectl apply -f "$ROOT/k8s/app/tls-proxy.yaml"
+
+echo "[+] Restarting tls-proxy to load the certificate"
+kubectl -n "$NS" rollout restart deploy/tls-proxy
 
 echo "[+] Waiting for tls-proxy rollout"
 kubectl -n "$NS" rollout status deploy/tls-proxy --timeout=90s

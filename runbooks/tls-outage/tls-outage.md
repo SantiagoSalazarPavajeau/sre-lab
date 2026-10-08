@@ -1,116 +1,110 @@
-TLS Outage Simulation
-=====================
+# TLS outage drill
 
-Overview
---------
+The nginx proxy terminates HTTPS and forwards requests to the app. Its certificate
+and key come from the `app-tls` Secret in namespace `app`.
 
-This lab introduces an HTTPS reverse proxy (NGINX) in front of the `app` service and simulates a TLS outage by rotating the proxy's certificate to an expired one. Recovery simply rotates the certificate back to a valid one.
+## Prepare
 
-What gets installed
--------------------
+Use a running lab cluster with the app deployed and kubectl pointed at the lab.
+From the repository root:
 
-- `k8s/app/tls-proxy.yaml`: NGINX Deployment + Service in namespace `app` that terminates TLS and proxies to `app:8080`.
-- Secret `app-tls`: Kubernetes TLS secret containing the current certificate and key used by the proxy.
-- Certs are generated locally into `scripts/certs/`.
-
-Prerequisites
--------------
-
-- A running cluster with the lab namespaces applied (`k8s/infra/namespace.yaml`) and the app deployed (`k8s/app/app-deployment.yaml`).
-- `kubectl` access to the cluster context.
-- `openssl` available on your PATH.
-
-Detailed Steps (No Scripts)
---------------------------
-
-Environment variables (override as needed for cert paths and CN):
-
-```
-export CERT_DIR=${CERT_DIR:-$(pwd)/scripts/certs}
-export COMMON_NAME=${COMMON_NAME:-app.local}
-mkdir -p "$CERT_DIR"
+```bash
+bash runbooks/tls-outage/tls_prepare.sh
+kubectl -n app port-forward svc/tls-proxy 8443:443
 ```
 
-1) Prepare certs, secret, and deploy the TLS proxy
+Preparation generates both certificate fixtures, installs the valid one, applies
+the proxy manifests, and restarts the proxy to load it. It changes the live Secret;
+do not run preparation during an incident unless you intend to recover it.
+The proxy manifest uses namespace `app`.
 
-- Ensure namespace exists:
-  - `kubectl get ns app >/dev/null 2>&1 || kubectl create ns app`
-- Generate a valid self-signed certificate:
-  - `openssl req -x509 -nodes -newkey rsa:2048 -keyout "$CERT_DIR/valid.key" -out "$CERT_DIR/valid.crt" -subj "/CN=$COMMON_NAME" -days 365`
-- Generate an expired self-signed certificate (expires immediately):
-  - `openssl req -x509 -nodes -newkey rsa:2048 -keyout "$CERT_DIR/expired.key" -out "$CERT_DIR/expired.crt" -subj "/CN=$COMMON_NAME" -days 0 || true`
-- Create or update the TLS secret with the VALID cert:
-  - `kubectl -n app create secret tls app-tls --cert="$CERT_DIR/valid.crt" --key="$CERT_DIR/valid.key" --dry-run=client -o yaml | kubectl apply -f -`
-- Apply the NGINX TLS proxy manifests:
-  - `kubectl apply -f k8s/app/tls-proxy.yaml`
-- Wait for rollout:
-  - `kubectl -n app rollout status deploy/tls-proxy --timeout=90s`
+To generate files only, without changing Kubernetes:
 
-2) Access and baseline validation
+```bash
+bash runbooks/tls-outage/tls_generate.sh
+```
 
-- Port-forward locally:
-  - `kubectl -n app port-forward svc/tls-proxy 8443:443`
-- Test success (expect HTTP 200 with self-signed warning):
-  - `curl -vk https://localhost:8443/`
-- Inspect certificate dates:
-  - `openssl s_client -connect localhost:8443 -servername "$COMMON_NAME" </dev/null 2>/dev/null | openssl x509 -noout -dates -subject`
+Fixtures default to `scripts/certs/` under the repository root, regardless of your
+working directory. Override with `CERT_DIR`; `COMMON_NAME` defaults to `app.local`.
+Private keys are generated with restrictive permissions and ignored by Git.
+Generation uses `openssl ca` with explicit January 2025 dates for the expired
+fixture, compatible with LibreSSL 3.3.6. Errors are not suppressed.
 
-Simulate Outage (Rotate to Expired Cert)
-----------------------------------------
+## Establish a baseline
 
-- Replace secret with EXPIRED cert:
-  - `kubectl -n app create secret tls app-tls --cert="$CERT_DIR/expired.crt" --key="$CERT_DIR/expired.key" --dry-run=client -o yaml | kubectl apply -f -`
-- Restart proxy to pick up new secret:
-  - `kubectl -n app rollout restart deploy/tls-proxy`
-  - `kubectl -n app rollout status deploy/tls-proxy --timeout=90s`
-- Validate failure:
-  - `curl -vk https://localhost:8443/` (expect TLS failure like “certificate has expired”).
-  - `openssl s_client -connect localhost:8443 -servername "$COMMON_NAME" </dev/null 2>/dev/null | openssl x509 -noout -dates -subject` (NotAfter should be in the past).
+```bash
+curl -vk https://localhost:8443/
+openssl s_client -connect localhost:8443 -servername app.local </dev/null 2>/dev/null |
+  openssl x509 -noout -dates -subject
+```
 
-Recover (Rotate Back to Valid Cert)
------------------------------------
+Expect an application response and a future `notAfter` date. `curl -k` skips
+certificate verification: it checks connectivity, not certificate validity.
 
-- Restore secret with VALID cert:
-  - `kubectl -n app create secret tls app-tls --cert="$CERT_DIR/valid.crt" --key="$CERT_DIR/valid.key" --dry-run=client -o yaml | kubectl apply -f -`
-- Restart proxy and wait:
-  - `kubectl -n app rollout restart deploy/tls-proxy`
-  - `kubectl -n app rollout status deploy/tls-proxy --timeout=90s`
-- Validate success:
-  - `curl -vk https://localhost:8443/` (expect HTTP 200 with self-signed warning only).
-  - `openssl s_client -connect localhost:8443 -servername "$COMMON_NAME" </dev/null 2>/dev/null | openssl x509 -noout -dates -subject` (NotAfter in the future).
+In Prometheus, query:
 
-Script Equivalents (Optional)
------------------------------
+```promql
+probe_ssl_earliest_cert_expiry{job="blackbox"} - time()
+```
 
-- Prepare: `scripts/tls_prepare.sh`
-- Outage: `scripts/tls_outage_start.sh`
-- Recover: `scripts/tls_outage_recover.sh`
+A positive value means seconds remaining until expiry. The repository's Blackbox
+configuration uses `insecure_skip_verify: true`, so `probe_success` can stay 1 even
+with an expired certificate. Use the expiry metric and TLS alerts for this drill.
 
-Notes
------
+## Inject and detect
 
-- The cert Common Name defaults to `app.local`; since it's self-signed, clients will warn on trust, but expiration will deterministically fail during outage.
-- The Service is `NodePort` on 30443. With kind, you can connect via any node IP; `port-forward` is simplest for local use.
- 
+```bash
+date -u
+bash runbooks/tls-outage/tls_outage_start.sh
+```
 
-Troubleshooting
----------------
+The script checks that the certificate parses and is expired before updating the
+Secret, then restarts nginx to load it. Kubernetes validates the certificate/key
+pair during the local `create secret tls --dry-run=client` step.
 
-- Verify secret exists and has data:
-  - `kubectl -n app get secret app-tls -o yaml | head -n 30`
-- Check NGINX proxy logs for reload errors:
-  - `kubectl -n app logs deploy/tls-proxy -c nginx --tail=200`
-- Confirm ConfigMap is mounted and using the expected server_name:
-  - `kubectl -n app get cm tls-proxy-nginx-conf -o yaml`
-- Ensure the app service resolves in-cluster:
-  - `kubectl -n app run -it netshoot --rm --image nicolaka/netshoot -- curl -sS http://app.app.svc.cluster.local:8080/`
+The expiry query should turn negative after a scrape. `TLSCertificateExpired`
+becomes Pending, then Firing after one minute of continuous expiry.
+`TLSCertificateExpiringSoon` covers only certificates still valid with fewer than
+14 days remaining; it has a five-minute hold. Expired certificates do not match it.
 
-Alerting
---------
+A rollout may close an existing port-forward. Restart it before further curl or
+openssl checks. Clients that validate expiry reject the expired certificate;
+`curl -k` intentionally bypasses that rejection. These self-signed fixtures also
+require explicit client trust, so an ordinary curl failure alone does not isolate
+expiry as the cause.
 
-- Prometheus scrapes a Blackbox Exporter probe against `https://tls-proxy.app.svc.cluster.local:443` to expose `probe_ssl_earliest_cert_expiry`.
-- Alerts defined in `k8s/monitoring/prometheus-config.yaml` (ConfigMap `prometheus-rules`):
-  - `TLSCertificateExpired`: fires when `time() > probe_ssl_earliest_cert_expiry` for 1m.
-  - `TLSCertificateExpiringSoon`: fires when expiry is within 14 days for 5m.
-- Blackbox Exporter config allows self-signed certs (`insecure_skip_verify: true`) so expiry is still measured.
-- Apply resources: `kubectl apply -f k8s/monitoring/blackbox-exporter.yaml && kubectl apply -f k8s/monitoring/prometheus-config.yaml && kubectl apply -f k8s/monitoring/prometheus-deployment.yaml`
+## Recover and verify
+
+```bash
+bash runbooks/tls-outage/tls_outage_recover.sh
+date -u
+```
+
+Recovery verifies the valid self-signed fixture before updating the Secret and
+restarting nginx. Confirm the expiry query is positive and both alerts are
+Inactive after the next scrape and rule evaluation. Record injection, detection,
+and recovery timestamps; do not infer incident duration from the rollout alone.
+
+## Load changed alert rules
+
+Repository edits do not update the running cluster automatically:
+
+```bash
+kubectl apply -f k8s/monitoring/prometheus-config.yaml
+kubectl -n monitoring rollout restart deployment/prometheus
+kubectl -n monitoring rollout status deployment/prometheus --timeout=90s
+```
+
+Restart the Prometheus port-forward if its pod was replaced. The expired and
+expiring-soon expressions preserve the expiry timestamp for alert annotations.
+
+## Troubleshoot startup
+
+```bash
+kubectl -n app describe pod -l app=tls-proxy
+kubectl -n app get secret app-tls
+kubectl -n app logs deploy/tls-proxy -c nginx --tail=200
+```
+
+A missing required Secret prevents container startup. Updating mounted files alone
+does not reload nginx's in-memory certificate; these scripts use a rollout restart.
