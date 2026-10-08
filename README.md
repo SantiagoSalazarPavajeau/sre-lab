@@ -1,7 +1,14 @@
 
 # SRE Lab
 
-Build sample apps and experiment with monitoring and failure scenarios.
+Build a sandbox of mock production systems to rehearse SRE playbooks end to end.
+
+## Overview
+
+- **System design simulations** bring "full blown" recreations of flagship products—Facebook-style social networking, Slack-like collaboration, Dropbox-esque storage, Netflix-grade streaming, and more—by wiring realistic request flows, background jobs, and dependencies that echo their real-world counterparts. Each mock brand shares a common operational footprint so you can rehearse blueprints from traffic ingress to data persistence without touching the real services.
+- **Chaos engineering & failure injection** is the centerpiece: toggle crash, latency, or error modes (with probabilities and delay budgets) entirely through environment variables to mimic brownouts, partial 500s, or hard crashes. TLS outage drills rotate valid and expired certificates to stress-test transport security response.
+- **Infrastructure-as-code & automation** cover the lifecycle. Terraform modules target LocalStack to emulate AWS primitives, while quickstart and teardown scripts spin clusters up or down in minutes. A Jenkins pipeline orchestrates app builds, Terraform applies, Kubernetes rollouts, and TLS simulations with a single push-button flow.
+- **Observability & runbooks** ship ready-made. Prometheus, Alertmanager, Grafana, cAdvisor, and the Blackbox Exporter auto-discover every mock workload via labels. Scenario guides expand the practice surface with API Gateway outage drills, JWT debugging, canary rollouts, and cost anomaly hunts.
 
 ## Quickstart
 
