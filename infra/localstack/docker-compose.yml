@@ -2,12 +2,12 @@ version: "3.8"
 
 services:
   localstack:
-    image: localstack/localstack:2.3
+    image: localstack/localstack:latest
     container_name: sre-lab-localstack
     ports:
       - "4566:4566"
     environment:
-      - SERVICES=iam,ec2,s3,ecr,sts,cloudwatch,logs
+      - SERVICES=iam,ec2,s3,ecr,sts,cloudwatch,logs,sqs,sns,dynamodb
       - DEBUG=1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
