@@ -7,8 +7,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
-KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
-export KUBECONFIG="${KUBECONFIG_FILE}"
+source "${ROOT}/start-up/lib/kubeconfig.sh"
 
 APP=${APP:-app}
 # Enable port-forwards by default for local UX
@@ -31,6 +30,10 @@ fi
 
 echo "[quickstart] Bringing up cluster..."
 start-up/cluster-up.sh
+
+# Ensure this process points at the same kubeconfig variant selected by
+# cluster-up (important for the kubectl port-forwards below).
+sre_lab_use_kubeconfig "${SRE_LAB_KUBECONFIG_VARIANT:-auto}"
 
 echo "[quickstart] Deploying infra..."
 start-up/deploy-infra.sh

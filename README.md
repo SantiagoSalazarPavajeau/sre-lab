@@ -19,6 +19,13 @@ Build sample apps and experiment with monitoring and failure scenarios.
 - Start: `docker compose -f infra/jenkins/docker-compose.yml up -d --build`
 - Stop: `docker compose -f infra/jenkins/docker-compose.yml down`
 
+## Kubernetes access
+
+Startup helpers maintain `.kind-kubeconfig-host` for local shells and
+`.kind-kubeconfig-internal` for containers. The `.kind-kubeconfig` symlink
+selects the current environment. Override selection with
+`SRE_LAB_KUBECONFIG_VARIANT=host|internal`.
+
 ## Failure Injection
 
 All apps accept failure modes via Deployment env vars:

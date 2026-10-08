@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
-KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
-export KUBECONFIG="${KUBECONFIG_FILE}"
+source "${ROOT}/start-up/lib/kubeconfig.sh"
+sre_lab_use_kubeconfig "${SRE_LAB_KUBECONFIG_VARIANT:-auto}"
 
 echo "Applying infra namespace and base resources..."
 # Ensure cluster is ready before applying manifests

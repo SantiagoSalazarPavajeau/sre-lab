@@ -2,8 +2,15 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-KUBECONFIG_FILE="${KUBECONFIG:-${ROOT}/.kind-kubeconfig}"
-export KUBECONFIG="${KUBECONFIG_FILE}"
+source "${ROOT}/start-up/lib/kubeconfig.sh"
+
+if [ -z "${KUBECONFIG:-}" ] || [ ! -f "${KUBECONFIG:-/dev/null}" ]; then
+  SRE_LAB_KUBECONFIG_SILENT=1 sre_lab_use_kubeconfig "${SRE_LAB_KUBECONFIG_VARIANT:-auto}"
+else
+  KUBECONFIG_FILE="${KUBECONFIG}"
+  export KUBECONFIG
+  export KUBECONFIG_FILE
+fi
 
 MAX_ATTEMPTS=${MAX_KUBE_WAIT_ATTEMPTS:-30}
 SLEEP_SECONDS=${KUBE_WAIT_SLEEP_SECONDS:-5}

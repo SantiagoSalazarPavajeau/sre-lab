@@ -4,8 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 
-KUBECONFIG_FILE="${ROOT}/.kind-kubeconfig"
-export KUBECONFIG="${KUBECONFIG_FILE}"
+source "${ROOT}/start-up/lib/kubeconfig.sh"
 
 if ! command -v kind >/dev/null 2>&1; then
   echo "kind is not installed. Install with: brew install kind" >&2
@@ -30,27 +29,6 @@ is_container() {
   return 1
 }
 
-normalize_bool() {
-  case "${1:-}" in
-    1|true|TRUE|yes|YES|y|Y) echo true ;;
-    0|false|FALSE|no|NO|n|N) echo false ;;
-    *) echo "" ;;
-  esac
-}
-
-USE_INTERNAL=""
-if [ -n "${KIND_USE_INTERNAL:-}" ]; then
-  USE_INTERNAL=$(normalize_bool "$KIND_USE_INTERNAL")
-fi
-
-if [ -z "$USE_INTERNAL" ]; then
-  if is_container; then
-    USE_INTERNAL=true
-  else
-    USE_INTERNAL=false
-  fi
-fi
-
 # Ensure this container can reach the kind network (only relevant when inside a container)
 if is_container && docker network inspect kind >/dev/null 2>&1; then
   CONTAINER_ID=$(hostname)
@@ -58,13 +36,12 @@ if is_container && docker network inspect kind >/dev/null 2>&1; then
   docker network connect kind "${CONTAINER_ID}" >/dev/null 2>&1 || true
 fi
 
-mkdir -p "$(dirname "${KUBECONFIG_FILE}")"
-if [ "$USE_INTERNAL" = true ]; then
-  echo "Writing INTERNAL kubeconfig for cluster '${CLUSTER_NAME}' to ${KUBECONFIG_FILE}"
-  kind get kubeconfig --name "${CLUSTER_NAME}" --internal > "${KUBECONFIG_FILE}"
-else
-  echo "Writing EXTERNAL kubeconfig for cluster '${CLUSTER_NAME}' to ${KUBECONFIG_FILE}"
-  kind get kubeconfig --name "${CLUSTER_NAME}" > "${KUBECONFIG_FILE}"
-fi
+# Refresh kubeconfig variants for both host shells and in-cluster/Jenkins usage
+kind get kubeconfig --name "${CLUSTER_NAME}" > "${SRE_LAB_KUBECONFIG_HOST}"
+kind get kubeconfig --name "${CLUSTER_NAME}" --internal > "${SRE_LAB_KUBECONFIG_INTERNAL}"
+
+# Pick the appropriate kubeconfig for this environment (overridable via
+# SRE_LAB_KUBECONFIG_VARIANT=host|internal).
+sre_lab_use_kubeconfig "${SRE_LAB_KUBECONFIG_VARIANT:-auto}"
 
 "${ROOT}/start-up/kube-wait.sh"
